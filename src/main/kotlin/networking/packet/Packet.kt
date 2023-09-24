@@ -28,11 +28,4 @@ sealed class Packet {
         class FieldStatic(override val name: String, val offset: Int, val size: Int): Field
         class FieldVariableLength(override val name: String, val minSize: Int, val maxSize: Int): Field
     }
-
-    companion object {
-        fun detect(packet: ByteReadPacket): Packet? {
-            val signature: Int = packet.readVarInt()
-            return PacketIndex.getPacketBySignature(signature)
-        }
-    }
 }

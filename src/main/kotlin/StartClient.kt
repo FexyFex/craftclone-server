@@ -14,7 +14,7 @@ fun clientMain() = runBlocking {
     val server = NetworkClient.connectToServer("localhost", 25567)
 
     // helo this is client
-    val packetData = PacketLogIn.writePacket(PacketLogIn.HumanReadableData(5, "Fexus"))
+    val packetData = PacketLogIn.writePacket(PacketLogIn.HumanReadableData("Fexus"))
     val sPacket = WrittenPacket(PacketLogIn.signature, packetData)
     server.sendPacket(sPacket)
 

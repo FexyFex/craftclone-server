@@ -15,7 +15,7 @@ data object PacketLogIn: Packet() {
         for (i in 0 until usernameLength) {
             username += packet.readShort().toInt().toChar()
         }
-        return HumanReadableData(usernameLength, username)
+        return HumanReadableData(username)
     }
 
     override fun <T: Packet.HumanReadableData> writePacket(data: T): ByteReadPacket {
@@ -36,7 +36,7 @@ data object PacketLogIn: Packet() {
     }
 
 
-    data class HumanReadableData(val usernameLength: Byte, val username: String): Packet.HumanReadableData()
+    data class HumanReadableData(val username: String, val usernameLength: Byte = username.length.toByte()): Packet.HumanReadableData()
 
     object Layout: Packet.Layout() {
         override val fields: Array<Field> = arrayOf(
