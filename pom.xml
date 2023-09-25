@@ -50,6 +50,13 @@
             <version>RELEASE</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- https://mavenlibs.com/maven/dependency/io.github.over-run/perlinoisej -->
+        <dependency>
+            <groupId>io.github.over-run</groupId>
+            <artifactId>perlinoisej</artifactId>
+            <version>0.2.0</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
