@@ -2,12 +2,10 @@ package networking.packet
 
 import io.ktor.utils.io.core.*
 import networking.DisconnectReason
-import networking.writeVarInt
 
 
-data object PacketDisconnect: Packet() {
-    override val signature: Int = 101
-    override val layout = Layout
+data object Packet255Disconnect: Packet() {
+    override val signature: Int = 255
 
 
     override fun readPacket(packet: ByteReadPacket): HumanReadableData {
@@ -20,7 +18,6 @@ data object PacketDisconnect: Packet() {
         data as HumanReadableData
 
         val packet = buildPacket {
-            writeVarInt(signature)
             writeByte(data.reason.value)
         }
 
@@ -29,11 +26,4 @@ data object PacketDisconnect: Packet() {
 
 
     data class HumanReadableData(val reason: DisconnectReason): Packet.HumanReadableData()
-
-    object Layout: Packet.Layout() {
-        override val fields: Array<Field> = arrayOf(
-            FieldStatic("signature", 0, Short.SIZE_BYTES),
-            FieldStatic("reason", Short.SIZE_BYTES, Byte.SIZE_BYTES)
-        )
-    }
 }

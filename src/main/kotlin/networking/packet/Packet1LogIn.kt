@@ -1,12 +1,10 @@
 package networking.packet
 
 import io.ktor.utils.io.core.*
-import networking.writeVarInt
 
 
-data object PacketLogIn: Packet() {
+data object Packet1LogIn: Packet() {
     override val signature: Int = 1
-    override val layout = Layout
 
 
     override fun readPacket(packet: ByteReadPacket): HumanReadableData {
@@ -22,7 +20,6 @@ data object PacketLogIn: Packet() {
         data as HumanReadableData
 
         val packet = buildPacket {
-            writeVarInt(signature)
             writeByte(data.usernameLength)
 
             for (i in 0 until data.usernameLength) {
@@ -37,12 +34,4 @@ data object PacketLogIn: Packet() {
 
 
     data class HumanReadableData(val username: String, val usernameLength: Byte = username.length.toByte()): Packet.HumanReadableData()
-
-    object Layout: Packet.Layout() {
-        override val fields: Array<Field> = arrayOf(
-            FieldStatic("signature", 0, Short.SIZE_BYTES),
-            FieldStatic("usernameLength", Short.SIZE_BYTES, Byte.SIZE_BYTES),
-            FieldVariableLength("username", Char.SIZE_BYTES * 1, Char.SIZE_BYTES * 20)
-        )
-    }
 }

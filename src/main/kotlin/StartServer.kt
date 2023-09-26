@@ -1,15 +1,6 @@
-import kotlinx.coroutines.runBlocking
-import networking.CentralServerConnectionHandler
-import networking.NetworkServer
+import game.CraftCloneServer
 
 
 fun main() {
-    serverMain()
-}
-
-fun serverMain() = runBlocking {
-    val server = NetworkServer.bind("localhost", 25567, CentralServerConnectionHandler())
-
-    // sometime later:
-    //server.close()
+    CraftCloneServer().start()
 }

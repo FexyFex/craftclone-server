@@ -2,6 +2,7 @@ package game.world.generation
 
 import game.blocks.BlockRegistry
 import game.world.Chunk
+import game.world.World
 import io.github.overrun.perlinoisej.PerlinNoise
 import math.datatype.vec.IVec2
 import math.datatype.vec.IVec3
@@ -18,7 +19,6 @@ import kotlin.math.round
 
 class WorldGenerator (private val world: World) {
     private val blocksToReplace = ConcurrentHashMap<IVec3, ConcurrentHashMap<IVec3, MutableList<BlockReplacement>>>()
-    private var preliminaryHeightAnd3DRoughnessMap = ConcurrentHashMap<IVec2, Pair<Array<FloatArray>, Array<FloatArray>>>()
     private val air = BlockRegistry.getIdByName("Air")
     private val stone = BlockRegistry.getIdByName("Stone")
     private val dirt = BlockRegistry.getIdByName("Dirt")
@@ -87,51 +87,10 @@ class WorldGenerator (private val world: World) {
         caveSpeleothermsNoise2D.SetFractalOctaves(3)
     }
 
-    fun getBlockToPlaceAt(pos: IVec3): Short{
-        val heightmap = heightmapNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat()) * heightmapMultiplier + heightmapAddition
-        val terrainMultiplier = 96
-        val terrainValue = terrainNoise3D.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat()) * terrainMultiplier
-        val mixValue = mixNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat())
-        val mixedValue = mix(heightmap, terrainValue, clamp(mixValue+1f/2f, 0f, 1f))
-        val scaledY = if (pos.y < 0) pos.y * 3 else pos.y
-        if (mixedValue - scaledY > 0) {
-            return stone ?: 1
-        }
-        return 0
-    }
-
-    fun getCaveAt(pos: IVec3): Short {
-        return if (getCaveTunnelsAt(pos) || getCaveRoomsAt(pos)) 0 else stone ?:1
-    }
-    fun getCaveTunnelsAt(pos: IVec3): Boolean {
-        val mid = 0.2f
-        val dist = 0.1f
-        val start = mid-2*dist
-        val end = mid+2*dist
-        var cave1 = caveTunnelNoise1.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
-        cave1 = if (cave1 > start && cave1 < end) (dist - (cave1-mid).absoluteValue) / dist else 0f
-        cave1 = clamp(cave1, 0f, 1f)
-        var cave2 = caveTunnelNoise2.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
-        cave2 = if (cave2 > start && cave2 < end) (dist - (cave2-mid).absoluteValue) / dist else 0f
-        cave2 = clamp(cave2, 0f, 1f)
-        val cave = cave1 * cave2
-        return cave >= 0.01
-    }
-
-    fun getCaveRoomsAt(pos: IVec3): Boolean {
-        var speleo2D = caveSpeleothermsNoise2D.GetNoise(pos.x.toFloat(), pos.z.toFloat())
-        speleo2D = if (speleo2D < 0.5) 0f else 8*speleo2D-6
-        val speleo3D = caveSpeleothermsNoise3D.GetNoise(pos.x.toFloat(), 2 * pos.y.toFloat(), pos.z.toFloat())
-        val speleo = if (speleo2D+speleo3D < 0) 1f else 0f
-        val rooms = caveRoomsNoise.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
-        val transformedY = clamp((pos.y+500)/1000f, 0f, 0.087f) +0.25f
-        val t = mix(transformedY, speleo, rooms)
-        return t < 0
-    }
 
     fun generateChunk(chunkPos: IVec3): Chunk {
         val chunkWorldPos = chunkPos * Chunk.extent
-        val chunk = Chunk(chunkWorldPos)
+        val chunk = Chunk(world, chunkWorldPos)
         val blocks: Array<Array<ShortArray>> = Array(Chunk.extent) { Array(Chunk.extent) { ShortArray(Chunk.extent) { 0 } } }
         val light: Array<Array<ShortArray>> = Array(Chunk.extent) { Array(Chunk.extent) { ShortArray(Chunk.extent) { 0b1111_0000_0000_0000.toShort() } } }
         val skylightQueue = LinkedList<IVec3>()
@@ -225,7 +184,7 @@ class WorldGenerator (private val world: World) {
                         else {
                             val aboveChunk = world.getChunkAt(chunkPos + IVec3(0,1,0))
                             if (aboveChunk != null) {
-                                skyLightAbove = aboveChunk.getLightAt(IVec3(x,0,z)) and 0b1111_0000_0000_0000
+                                skyLightAbove = aboveChunk.getLightAt(IVec3(x,0,z)) and 0b1111_0000_0000_0000.toShort()
                             }
                             else {
                                 if (worldPos.y + Chunk.extent > terrainHeight) skyLightAbove = 0b1111_0000_0000_0000.toShort()
@@ -252,6 +211,48 @@ class WorldGenerator (private val world: World) {
         }
         else chunk.defaultLight = 0
         return chunk
+    }
+
+    fun getBlockToPlaceAt(pos: IVec3): Short{
+        val heightmap = heightmapNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat()) * heightmapMultiplier + heightmapAddition
+        val terrainMultiplier = 96
+        val terrainValue = terrainNoise3D.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat()) * terrainMultiplier
+        val mixValue = mixNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat())
+        val mixedValue = mix(heightmap, terrainValue, clamp(mixValue+1f/2f, 0f, 1f))
+        val scaledY = if (pos.y < 0) pos.y * 3 else pos.y
+        if (mixedValue - scaledY > 0) {
+            return stone ?: 1
+        }
+        return 0
+    }
+
+    fun getCaveAt(pos: IVec3): Short {
+        return if (getCaveTunnelsAt(pos) || getCaveRoomsAt(pos)) 0 else stone ?:1
+    }
+    fun getCaveTunnelsAt(pos: IVec3): Boolean {
+        val mid = 0.2f
+        val dist = 0.1f
+        val start = mid-2*dist
+        val end = mid+2*dist
+        var cave1 = caveTunnelNoise1.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
+        cave1 = if (cave1 > start && cave1 < end) (dist - (cave1-mid).absoluteValue) / dist else 0f
+        cave1 = clamp(cave1, 0f, 1f)
+        var cave2 = caveTunnelNoise2.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
+        cave2 = if (cave2 > start && cave2 < end) (dist - (cave2-mid).absoluteValue) / dist else 0f
+        cave2 = clamp(cave2, 0f, 1f)
+        val cave = cave1 * cave2
+        return cave >= 0.01
+    }
+
+    fun getCaveRoomsAt(pos: IVec3): Boolean {
+        var speleo2D = caveSpeleothermsNoise2D.GetNoise(pos.x.toFloat(), pos.z.toFloat())
+        speleo2D = if (speleo2D < 0.5) 0f else 8*speleo2D-6
+        val speleo3D = caveSpeleothermsNoise3D.GetNoise(pos.x.toFloat(), 2 * pos.y.toFloat(), pos.z.toFloat())
+        val speleo = if (speleo2D+speleo3D < 0) 1f else 0f
+        val rooms = caveRoomsNoise.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
+        val transformedY = clamp((pos.y+500)/1000f, 0f, 0.087f) +0.25f
+        val t = mix(transformedY, speleo, rooms)
+        return t < 0
     }
 
     private fun updateSkyLightQueue(lightQueue: LinkedList<IVec3>, chunk: Chunk, neighborLightUpdateQueue: LinkedList<IVec3>) {

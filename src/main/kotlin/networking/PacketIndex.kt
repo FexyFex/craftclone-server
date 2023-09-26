@@ -7,6 +7,8 @@ object PacketIndex {
 
     init {
         Packet::class.sealedSubclasses.map { it.objectInstance!! }.forEach {
+            if (packets.containsKey(it.signature))
+                throw IllegalArgumentException("Key ${it.signature} already exists!")
             packets[it.signature] = it
         }
     }

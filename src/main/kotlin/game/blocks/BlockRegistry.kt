@@ -1,12 +1,9 @@
 package game.blocks
 
-import game.blocks.icongenerator.BlockIconRenderer
-import backend.util.buffers.byteBufferOf
+import FileSystem
 import game.blocks.blocktypes.AirBlock
 import game.blocks.blocktypes.BlockType
-import game.gui.GuiSubTextures
-import game.item.ItemRegistry
-import resource.CustomTextureResource
+import game.items.ItemRegistry
 import java.io.File
 
 
@@ -17,7 +14,6 @@ object BlockRegistry {
     val blockCount: Int; get() = registeredBlocks.size
 
     init {
-        val iconGenerator = BlockIconRenderer()
         registerBlock(AirBlock)
 
         val blockTypes = BlockType::class.sealedSubclasses
@@ -26,7 +22,7 @@ object BlockRegistry {
             .minus(AirBlock)
             .toMutableList()
 
-        val worldDirectory = File(RuntimeGlobals.worldDirectory)
+        val worldDirectory = File(FileSystem.worldDir)
         val savedRegistryFile = File(worldDirectory, "block-registry.blr")
         if (savedRegistryFile.exists()) {
             val reader = savedRegistryFile.bufferedReader()
@@ -41,14 +37,6 @@ object BlockRegistry {
                 if (block != null) {
                     nextId = id
                     registerBlock(block)
-                    val texResource: CustomTextureResource = if (block == AirBlock) {
-                        CustomTextureResource(byteBufferOf(0), 1, 1)
-                    } else {
-                        val texture = iconGenerator.createIconTexture(block)
-                        CustomTextureResource(texture, iconGenerator.extent.width, iconGenerator.extent.height)
-                    }
-                    GuiSubTextures.register(block.name, texResource)
-                    block.icon = texResource
                     blockTypes.remove(block)
                 }
             }
@@ -58,13 +46,7 @@ object BlockRegistry {
 
         blockTypes.forEach {
             registerBlock(it)
-            val texture = iconGenerator.createIconTexture(it)
-            val texResource = CustomTextureResource(texture, iconGenerator.extent.width, iconGenerator.extent.height)
-            GuiSubTextures.register(it.name, texResource)
-            it.icon = texResource
         }
-
-        iconGenerator.destroy() // wischtisch
 
         if (blockTypes.isNotEmpty()) { // blocks were added. save block registy
             worldDirectory.mkdirs()
@@ -75,6 +57,7 @@ object BlockRegistry {
             }
             writer.close()
         }
+
         ItemRegistry
     }
 

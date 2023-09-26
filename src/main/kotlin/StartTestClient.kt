@@ -2,8 +2,8 @@ import kotlinx.coroutines.runBlocking
 import networking.DisconnectReason
 import networking.NetworkClient
 import networking.WrittenPacket
-import networking.packet.PacketDisconnect
-import networking.packet.PacketLogIn
+import networking.packet.Packet255Disconnect
+import networking.packet.Packet1LogIn
 
 
 fun main() {
@@ -14,12 +14,12 @@ fun clientMain() = runBlocking {
     val server = NetworkClient.connectToServer("localhost", 25567)
 
     // helo this is client
-    val packetData = PacketLogIn.writePacket(PacketLogIn.HumanReadableData("Fexus"))
-    val sPacket = WrittenPacket(PacketLogIn.signature, packetData)
+    val packetData = Packet1LogIn.writePacket(Packet1LogIn.HumanReadableData("Fexus"))
+    val sPacket = WrittenPacket(Packet1LogIn.signature, packetData)
     server.sendPacket(sPacket)
 
-    val disconnectPacketData = PacketDisconnect.HumanReadableData(DisconnectReason.LOGOUT)
-    val writtenPacket = WrittenPacket(PacketDisconnect.signature, PacketDisconnect.writePacket(disconnectPacketData))
+    val disconnectPacketData = Packet255Disconnect.HumanReadableData(DisconnectReason.LOGOUT)
+    val writtenPacket = WrittenPacket(Packet255Disconnect.signature, Packet255Disconnect.writePacket(disconnectPacketData))
     server.sendPacket(writtenPacket)
 
     // sometime later:

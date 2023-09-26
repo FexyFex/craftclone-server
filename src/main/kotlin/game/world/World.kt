@@ -1,7 +1,10 @@
 package game.world
 
+import FileSystem
 import game.blocks.BlockRegistry
+import game.items.ItemStack
 import game.world.generation.WorldGenerator
+import game.world.saving.WorldSaver
 import math.datatype.vec.DVec3
 import math.datatype.vec.IVec3
 import math.datatype.vec.Vec3
@@ -19,34 +22,27 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.sign
 import kotlin.random.Random
-import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTime
 
 
 class World {
-    val seed: Long
+    val seed: Int
 
     var worldTime: Double = 0.0
 
     private val chunks = ConcurrentHashMap<IVec3, Chunk>()
     private val numberOfChunkGenerationThreads: Int = 1
-    private val numberOfChunkMeshingThreads: Int = 1
     private var chunkGenerationThreadShouldBeRunning: AtomicBoolean = AtomicBoolean(true)
     private var chunkLoadingThreadShouldBeRunning: AtomicBoolean = AtomicBoolean(true)
     private val currentlyGeneratingChunks = ConcurrentHashMap<IVec3, Thread>()
     private val chunkGenerationQueue = PriorityBlockingQueue<PriorityQueueChunkPosition>()
-    private val currentlyMeshingChunks = ConcurrentHashMap<Chunk, Thread>()
-    private val chunkMeshingQueue = PriorityBlockingQueue<PriorityQueueChunk>()
-    private val chunksForInstantRemeshing = HashSet<Chunk>()
     private val chunkDestroyQueue = LinkedBlockingQueue<IVec3>()
     private var minChunk = IVec3(0,0,0)
     private var maxChunk = IVec3(0,0,0)
     private val worldGenerator: WorldGenerator
-
     private var lastLoadPosition = DVec3(100.0)
     private var lastLoadTime: Double = 0.0
     private val reloadInterval: Double = 30.0
+
 
     private fun createChunkGenerationThread() = Thread {
         while (chunkGenerationThreadShouldBeRunning.get()) {
@@ -109,21 +105,21 @@ class World {
     }
 
     init {
-        val worldDirectory = File(RuntimeGlobals.worldDirectory)
+        val worldDirectory = File(FileSystem.worldDir)
         val worldInfoFile = File(worldDirectory, "world.info")
         var infoFileNeedsRewrite = false
         if (worldInfoFile.exists()) {
             val reader = worldInfoFile.bufferedReader()
             val lines = reader.readLines().map { it.split(":") }
             reader.close()
-            seed = lines.firstOrNull { it[0] == "seed" }?.get(1)?.toLong ?: run {
+            seed = lines.firstOrNull { it[0] == "seed" }?.get(1)?.toInt() ?: run {
                 infoFileNeedsRewrite = true
-                Random(System.nanoTime()).nextLong()
+                Random(System.nanoTime()).nextLong().toInt()
             }
         }
         else {
             infoFileNeedsRewrite = true
-            seed = Random(System.nanoTime()).nextLong()
+            seed = Random(System.nanoTime()).nextLong().toInt()
         }
         if (infoFileNeedsRewrite) {
             worldDirectory.mkdirs()
@@ -134,13 +130,10 @@ class World {
 
         loadPlayer()
 
-        worldGenerator = WorldGenerator(seed.toInt())
+        worldGenerator = WorldGenerator(this)
 
         repeat(numberOfChunkGenerationThreads){
             createChunkGenerationThread().start()
-        }
-        repeat(numberOfChunkMeshingThreads){
-            createChunkMeshingThread().start()
         }
         chunkLoadingThread.start()
     }
@@ -632,7 +625,6 @@ class World {
     fun shutDown() {
         chunkGenerationThreadShouldBeRunning.set(false)
         chunkLoadingThreadShouldBeRunning.set(false)
-        chunkMeshingThreadShouldBeRunning.set(false)
         Thread.sleep(10)
         saveChunks()
         savePlayer()
@@ -648,8 +640,8 @@ class World {
     }
 
     fun savePlayer() {
-        val worldDirectory = File(RuntimeGlobals.worldDirectory)
-        val playersDirectory = File(worldDirectory, "players")
+        val playerDirectory = File(FileSystem.playerDir)
+        val playersDirectory = File(playerDirectory, "players")
         val oldPlayerFile = File(playersDirectory, "player0.player")
         val playerFile = File(playersDirectory, "player0.player_new")
         playersDirectory.mkdirs()
@@ -678,7 +670,7 @@ class World {
     }
 
     fun loadPlayer() {
-        val worldDirectory = File(RuntimeGlobals.worldDirectory)
+        val worldDirectory = File(FileSystem.worldDir)
         val playersDirectory = File(worldDirectory, "players")
         val playerFile = File(playersDirectory, "player0.player")
         if (playerFile.exists()) {

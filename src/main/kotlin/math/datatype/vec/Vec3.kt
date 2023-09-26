@@ -26,5 +26,7 @@ data class Vec3(override var x: Float, override var y: Float, override var z: Fl
         return Vec3(this.x / num, this.y / num, this.z / num)
     }
 
+    override operator fun unaryMinus(): Vec3 = Vec3(-x, -y, -z)
+
     override fun dot(other: TVec3<Float>): Float = this.x * other.x + this.y * other.y + this.z * other.z
 }
