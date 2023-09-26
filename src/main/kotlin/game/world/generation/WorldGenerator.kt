@@ -266,11 +266,10 @@ class WorldGenerator (private val world: World) {
                 continue
             }
 
-            var currentLight = world.lightFromShortToVec4i(chunk.getLightAt(currentPos))
+            var currentLight = world.lightFromShortToIVec4(chunk.getLightAt(currentPos))
             val abovePos = currentPos + IVec3(0, 1, 0)
-            val aboveLightLevel = if (abovePos.y >= Chunk.extent)
-                                    world.getLightAt(chunk.position+abovePos)[3]
-                                    else world.lightFromShortToVec4i(chunk.getLightAt(abovePos))[3]
+            val aboveLightLevel: Int = if (abovePos.y >= Chunk.extent) world.getLightAt(chunk.position+abovePos)[3]
+                                    else world.lightFromShortToIVec4(chunk.getLightAt(abovePos))[3]
             val lightLevel = if (aboveLightLevel == 15) 15 else {
                 var maxLvl = 0
                 for (nextDirection in listOf(
@@ -283,15 +282,15 @@ class WorldGenerator (private val world: World) {
                     )
                                         world.getLightAt(chunk.position+nextPos)
                                     else
-                                        world.lightFromShortToVec4i(chunk.getLightAt(nextPos))
+                                        world.lightFromShortToIVec4(chunk.getLightAt(nextPos))
                     maxLvl = max(maxLvl, nextLight[3])
                 }
                 if (maxLvl == 0) 0 else maxLvl - 1
             }
             currentLight[3] = lightLevel
-            chunk.setLightAt(currentPos, world.lightFromVec4iToShort(currentLight))
+            chunk.setLightAt(currentPos, world.lightFromIVec4ToShort(currentLight))
 
-            currentLight = world.lightFromShortToVec4i(chunk.getLightAt(currentPos))
+            currentLight = world.lightFromShortToIVec4(chunk.getLightAt(currentPos))
             for (nextDirection in listOf(
                 IVec3(-1, 0, 0), IVec3(1, 0, 0), IVec3(0, 1, 0), IVec3(0, 0, -1), IVec3(0, 0, 1)
             )) {
@@ -305,11 +304,11 @@ class WorldGenerator (private val world: World) {
                 }
 
                 val nextBlock = chunk.getBlockAt(nextPos)
-                val nextLight = world.lightFromShortToVec4i(chunk.getLightAt(nextPos))
+                val nextLight = world.lightFromShortToIVec4(chunk.getLightAt(nextPos))
                 if (nextBlock == 0.toShort() || BlockRegistry.getBlockById(nextBlock)?.solid == false) {
                     if (nextLight[3] + 2 <= currentLight[3]) {
                         nextLight[3] = currentLight[3] - 1
-                        chunk.setLightAt(nextPos, world.lightFromVec4iToShort(nextLight))
+                        chunk.setLightAt(nextPos, world.lightFromIVec4ToShort(nextLight))
                         lightQueue.add(nextPos)
                     }
                 }
@@ -319,11 +318,11 @@ class WorldGenerator (private val world: World) {
                 nextPos.y < 0 || nextPos.y >= Chunk.extent ||
                 nextPos.z < 0 || nextPos.z >= Chunk.extent)) {
                 val nextBlock = chunk.getBlockAt(nextPos)
-                val nextLight = world.lightFromShortToVec4i(chunk.getLightAt(nextPos))
+                val nextLight = world.lightFromShortToIVec4(chunk.getLightAt(nextPos))
                 if (nextBlock == 0.toShort() || BlockRegistry.getBlockById(nextBlock)?.solid == false) {
                     if (nextLight[3] < currentLight[3]) {
                         nextLight[3] = currentLight[3]
-                        chunk.setLightAt(nextPos, world.lightFromVec4iToShort(nextLight))
+                        chunk.setLightAt(nextPos, world.lightFromIVec4ToShort(nextLight))
                         lightQueue.add(nextPos)
                     }
                 }

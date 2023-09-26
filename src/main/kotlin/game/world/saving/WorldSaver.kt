@@ -1,5 +1,5 @@
 package game.world.saving
-
+/*
 import FileSystem
 import game.world.Chunk
 import game.world.World
@@ -309,3 +309,4 @@ object WorldSaver {
     }
 
 }
+ */

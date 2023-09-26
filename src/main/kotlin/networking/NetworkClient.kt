@@ -70,6 +70,7 @@ class NetworkClient(
                     target.writeVarInt(packet.signature)
                     target.writeVarInt(packet.packetData.remaining.toInt())
                     target.writePacket(packet.packetData)
+                    target.flush()
                 }
             }
         }

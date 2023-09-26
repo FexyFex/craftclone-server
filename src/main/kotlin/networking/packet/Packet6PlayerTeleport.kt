@@ -5,7 +5,7 @@ import math.datatype.vec.Vec3
 
 
 data object Packet6PlayerTeleport: Packet() {
-    override val signature: Int = 5
+    override val signature: Int = 6
 
 
     override fun readPacket(packet: ByteReadPacket): HumanReadableData {
