@@ -4,10 +4,10 @@ data class Vec3(override var x: Float, override var y: Float, override var z: Fl
     constructor(s: Float): this(s,s,s)
     constructor(x: Number, y: Number, z: Number): this(x.toFloat(), y.toFloat(), z.toFloat())
 
-    override operator fun plus(other: TVec3<Float>): TVec3<Float> = Vec3(this.x + other.x, this.y + other.y, this.z + other.z)
-    override operator fun minus(other: TVec3<Float>): TVec3<Float> = Vec3(this.x - other.x, this.y - other.y, this.z - other.z)
-    override operator fun times(other: TVec3<Float>): TVec3<Float> = Vec3(this.x * other.x, this.y * other.y, this.z * other.z)
-    override operator fun div(other: TVec3<Float>): TVec3<Float> = Vec3(this.x / other.x, this.y / other.y, this.z / other.z)
+    override operator fun plus(other: TVec3<Float>): Vec3 = Vec3(this.x + other.x, this.y + other.y, this.z + other.z)
+    override operator fun minus(other: TVec3<Float>): Vec3 = Vec3(this.x - other.x, this.y - other.y, this.z - other.z)
+    override operator fun times(other: TVec3<Float>): Vec3 = Vec3(this.x * other.x, this.y * other.y, this.z * other.z)
+    override operator fun div(other: TVec3<Float>): Vec3 = Vec3(this.x / other.x, this.y / other.y, this.z / other.z)
 
     override operator fun plus(other: Number): Vec3 {
         val num = other.toFloat()

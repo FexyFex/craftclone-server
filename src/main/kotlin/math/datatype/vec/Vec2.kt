@@ -3,10 +3,10 @@ package math.datatype.vec
 data class Vec2(override var x: Float, override var y: Float): TVec2<Float>() {
     constructor(s: Float): this(s,s)
 
-    override operator fun plus(other: TVec2<Float>): TVec2<Float> = Vec2(this.x + other.x, this.y + other.y)
-    override operator fun minus(other: TVec2<Float>): TVec2<Float> = Vec2(this.x - other.x, this.y - other.y)
-    override operator fun times(other: TVec2<Float>): TVec2<Float> = Vec2(this.x * other.x, this.y * other.y)
-    override operator fun div(other: TVec2<Float>): TVec2<Float> = Vec2(this.x / other.x, this.y / other.y)
+    override operator fun plus(other: TVec2<Float>): Vec2 = Vec2(this.x + other.x, this.y + other.y)
+    override operator fun minus(other: TVec2<Float>): Vec2 = Vec2(this.x - other.x, this.y - other.y)
+    override operator fun times(other: TVec2<Float>): Vec2 = Vec2(this.x * other.x, this.y * other.y)
+    override operator fun div(other: TVec2<Float>): Vec2 = Vec2(this.x / other.x, this.y / other.y)
 
     override operator fun plus(other: Number): Vec2 {
         val num = other.toInt()

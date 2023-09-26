@@ -12,6 +12,7 @@ data object Packet2AllowLogIn: Packet() {
         return HumanReadableData(ok)
     }
 
+    fun writePacket() = buildPacket { writeByte(1) }
     override fun <T: Packet.HumanReadableData> writePacket(data: T): ByteReadPacket {
         data as HumanReadableData
 
