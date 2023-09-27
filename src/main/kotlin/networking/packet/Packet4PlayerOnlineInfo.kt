@@ -6,7 +6,7 @@ import networking.writeVarInt
 
 
 data object Packet4PlayerOnlineInfo: Packet() {
-    override val signature: Int = 7
+    override val signature: Int = 4
 
 
     override fun readPacket(packet: ByteReadPacket): HumanReadableData {

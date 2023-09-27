@@ -1,4 +1,4 @@
-package properties
+package game.properties
 
 object PropertyList {
 }

@@ -1,10 +1,11 @@
 package game
 
+import FileSystem
+import game.properties.ServerProperty
 import game.world.World
 import kotlinx.coroutines.*
 import math.datatype.transform.Transform
 import math.datatype.vec.DVec3
-import math.datatype.vec.IVec3
 import networking.*
 import networking.packet.*
 import java.util.concurrent.Executors
@@ -20,13 +21,40 @@ object CraftCloneServer {
 
 
     fun bindAndLaunch() = runBlocking {
+        loadProperties()
         val server = NetworkServer.bind("localhost", 25567, CentralServerConnectionHandler())
         startCentralServerLoop()
+        server.close()
     }
 
     private fun startCentralServerLoop() {
-
+        while (true) {  }
     }
+
+
+    private val properties = mutableMapOf<String, String>()
+    private fun loadProperties() {
+        if (!FileSystem.propertiesFile.exists()) writeDefaultPropertiesFile()
+        val lines = FileSystem.propertiesFile.readLines()
+        lines.forEach {
+            val tokens = it.split("=")
+            val name = tokens.first()
+            val value = tokens.last()
+            properties[name] = value
+        }
+    }
+    private fun writeDefaultPropertiesFile() {
+        FileSystem.propertiesFile.createNewFile()
+        val properties = ServerProperty::class.sealedSubclasses.map { it.constructors.first { c -> c.parameters.isEmpty() }.call() }
+        val fileWriter = FileSystem.propertiesFile.writer()
+
+        properties.forEach {
+            val line = "${it.name}=${it.value}\n"
+            fileWriter.write(line)
+        }
+        fileWriter.close()
+    }
+    fun getProperty(name: String) = properties[name]
 
 
     class CentralServerConnectionHandler: NetworkServerConnectionHandler {
@@ -52,14 +80,14 @@ object CraftCloneServer {
                     sendServerInfo()
                     beginAcceptingPackets()
                 }
-                client.close()
                 isRunning = false
+                shouldRun = false
+                client.close()
                 println("Goodbye $playerName")
             }
         }
 
         private suspend fun awaitLoginPacket(): Boolean {
-            // TODO: Timeouts!
             while (shouldRun) {
                 val writtenPacket = client.receivePacket()
                 val packetType = PacketIndex.getPacketBySignature(writtenPacket.signature) ?: continue
@@ -69,9 +97,12 @@ object CraftCloneServer {
 
                 this.playerName = data.username
                 if (players.firstOrNull { it.name == playerName } != null) {
-                    println("Player with that name already online!")
+                    val rejectData = Packet3RejectLogIn.HumanReadableData(ConnectionRejectedReason.PLAYER_NAME_ALREADY_ONLINE)
+                    val packet = Packet3RejectLogIn.writePacket(rejectData)
+                    client.sendPacket(WrittenPacket(Packet3RejectLogIn.signature, packet))
                     return false
                 }
+
                 val okPacket = Packet2AllowLogIn.writePacket()
                 client.sendPacket(WrittenPacket(Packet2AllowLogIn.signature, okPacket))
                 // TODO: load player transform
@@ -104,12 +135,12 @@ object CraftCloneServer {
         private fun handlePacket(packetType: Packet, packetData: Packet.HumanReadableData) {
             when (packetType) {
                 Packet255Disconnect -> shouldRun = false
-                Packet20RequestSurroundingChunks -> requestChunk((packetData as Packet20RequestSurroundingChunks.HumanReadableData).chunkPos)
+                Packet20RequestSurroundingChunks -> requestChunks((packetData as Packet20RequestSurroundingChunks.HumanReadableData).renderDistance)
                 else -> throw IllegalArgumentException("huh")
             }
         }
 
-        private fun requestChunk(chunkPos: IVec3) {
+        private fun requestChunks(renderDistance: RenderDistance) {
 
         }
 
