@@ -8,6 +8,7 @@ import math.datatype.transform.Transform
 import math.datatype.vec.DVec3
 import networking.*
 import networking.packet.*
+import java.net.SocketException
 import java.util.concurrent.Executors
 
 
@@ -115,7 +116,7 @@ object CraftCloneServer {
 
         private suspend fun sendServerInfo() {
             // Send all online players
-            players.forEach {
+            players.filter { it.name != this.playerName }.forEach {
                 val playerOnlinePacketData = Packet4PlayerOnlineInfo.HumanReadableData(it.name, 420)
                 val packet = Packet4PlayerOnlineInfo.writePacket(playerOnlinePacketData)
                 client.sendPacket(WrittenPacket(Packet4PlayerOnlineInfo.signature, packet))
@@ -130,6 +131,7 @@ object CraftCloneServer {
                 val data = packetType.readPacket(writtenPacket.packetData)
                 handlePacket(packetType, data)
             }
+            println("Goodbye $playerName")
         }
 
         private fun handlePacket(packetType: Packet, packetData: Packet.HumanReadableData) {

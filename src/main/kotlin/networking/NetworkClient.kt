@@ -11,7 +11,7 @@ import java.util.concurrent.Executors
 
 
 class NetworkClient(
-    private val dispatcher: CoroutineDispatcher,
+    private val dispatcher: ExecutorCoroutineDispatcher,
     private val socket: Socket,
     private val send: SendChannel<WrittenPacket>,
     private val receive: ReceiveChannel<WrittenPacket>,
@@ -29,7 +29,8 @@ class NetworkClient(
             socket.close()
         }
         socket.awaitClosed()
-        dispatcher.job.cancelAndJoin()
+        //dispatcher.job.cancelAndJoin()
+        dispatcher.close()
     }
 
     companion object {
