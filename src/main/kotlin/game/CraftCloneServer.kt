@@ -3,11 +3,22 @@ package game
 import FileSystem
 import game.properties.ServerProperty
 import game.world.World
+import game.world.saving.PlayerSaver
 import kotlinx.coroutines.*
 import math.datatype.transform.Transform
 import math.datatype.vec.DVec3
 import networking.*
 import networking.packet.*
+import util.getDouble
+import util.getFloat
+import util.getInt
+import util.toByteArray
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.Executors
 
 
@@ -29,6 +40,11 @@ object CraftCloneServer {
 
     private fun startCentralServerLoop() {
         while (true) {  }
+    }
+
+    private fun shutDown() {
+        world.shutDown()
+        savePlayers()
     }
 
 
@@ -55,6 +71,16 @@ object CraftCloneServer {
         fileWriter.close()
     }
     fun getProperty(name: String) = properties[name]
+
+    fun savePlayers() {
+        for (player in players) {
+            PlayerSaver.savePlayer(player)
+        }
+    }
+
+    fun loadPlayer(playerName: String) {
+        players.add(PlayerSaver.loadPlayer(playerName))
+    }
 
 
     class CentralServerConnectionHandler: NetworkServerConnectionHandler {

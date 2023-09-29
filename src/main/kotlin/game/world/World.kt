@@ -1,13 +1,24 @@
 package game.world
 
+import FileSystem
+import game.CraftCloneServer
+import game.RemotePlayer
 import game.blocks.BlockRegistry
 import game.blocks.blocktypes.LightSourceBlockType
 import game.world.generation.WorldGenerator
+import game.world.saving.PlayerSaver
+import game.world.saving.WorldSaver
+import game.world.util.ChunkBounds
+import math.datatype.vec.IVec2
 import math.datatype.vec.IVec3
 import math.datatype.vec.IVec4
-import util.for3D
+import util.toByteArray
 import util.ushr
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -30,13 +41,12 @@ class World(var seed : Long) {
     private val chunkGenerationQueue = PriorityBlockingQueue<PriorityQueueChunkPosition>()
     private val chunkDestroyQueue = LinkedBlockingQueue<IVec3>()
     private val chunkCache = ChunkCache(64, this)
-    private var minChunk = IVec3(0,0,0)
-    private var maxChunk = IVec3(0,0,0)
     private val worldGenerator : WorldGenerator
+    private val loadedAreas = mutableMapOf<RemotePlayer, ChunkBounds>()
 
     init {
 
-        val worldDirectory = File("..\\craftclone-server-worlds\\world-1")
+        val worldDirectory = File(FileSystem.worldDir)
         val worldInfoFile = File(worldDirectory, "world.info")
         var infoFileNeedsRewrite = false
         if (worldInfoFile.exists()) {
@@ -57,8 +67,6 @@ class World(var seed : Long) {
             writer.write("seed:$seed")
             writer.close()
         }
-
-        loadPlayers()
 
         worldGenerator = WorldGenerator(this)
 
@@ -127,6 +135,7 @@ class World(var seed : Long) {
     fun setChunkAt(pos: IVec3, chunk: Chunk) {
         if (chunks.containsKey(pos)) return
         chunks[pos] = chunk
+        //TODO: send chunk to players that have it in their loaded area (loadedAreas)
     }
 
     fun getChunkAt(chunkPos: IVec3): Chunk {
@@ -155,6 +164,55 @@ class World(var seed : Long) {
         chunkDestroyQueue.put(pos)
     }
 
+    fun isPositionInLoadedArea(pos: IVec3): Boolean {
+        val chunkPos = Chunk.worldPosToChunkPos(pos)
+        for (area in loadedAreas.values) {
+            if (chunkPos in area) return true
+        }
+        return false
+    }
+
+    private fun updateAreaLoadedByPlayer(player: RemotePlayer, newArea: ChunkBounds) {
+        val pos = Chunk.worldPosToChunkPos(player.pos)
+        val remainLoadedBounds = ChunkBounds(newArea.getMinChunk() + IVec3(-1), newArea.getMaxChunk() + IVec3(1))
+        val oldBounds = loadedAreas[player]
+        chunkGenerationQueue.removeIf { it.chunkPos !in newArea }
+        val chunkPositionsToLoad = mutableListOf<IVec3>()
+        newArea.forEachChunk { chunkPos ->
+            val oldChunk = chunks[chunkPos]
+            // queue new chunks to be loaded (only if not in chunk cache
+            if (oldChunk == null) {
+                val cachedChunk = chunkCache.getCachedChunkAt(chunkPos)
+                if (cachedChunk == null) chunkPositionsToLoad.add(chunkPos)
+            } else {
+                worldGenerator.replaceBlocksInChunk(oldChunk, chunkPos)
+            }
+        }
+        val loadedChunks = WorldSaver.loadChunks(this, chunkPositionsToLoad)
+        loadedChunks.forEach {
+            val chunk = it.second
+            val chunkPos = it.first
+            if (chunk != null) { // load chunk from file
+                setChunkAt(chunkPos, chunk)
+                worldGenerator.replaceBlocksInChunk(chunk, chunkPos)
+            } else { // generate chunk
+                val dif = pos - chunkPos
+                val horizontalDistance = IVec2(dif.x, dif.z).length
+                queueChunkGenerationAt(chunkPos, horizontalDistance - (chunkPos.y * 2))
+            }
+        }
+        // before unloading, first save all chunks that need it
+        saveChunks()
+        PlayerSaver.savePlayer(player)
+        //unload chunks that are in the old range but not in the new range (put into chunk cache)
+        chunkDestroyQueue.removeIf { it in newArea }
+        oldBounds?.forEachChunk { chunkPos ->
+            if (chunkPos !in remainLoadedBounds)
+                cacheChunkAt(chunkPos)
+        }
+        loadedAreas[player] = newArea
+    }
+
     fun getBlockAt(pos: IVec3): Short {
         val chunkPos = Chunk.worldPosToChunkPos(pos)
         val blockPosInChunk = Chunk.worldPosToPosInChunk(pos)
@@ -171,6 +229,11 @@ class World(var seed : Long) {
             chunks[chunkPos] = chunk
         }
         chunk.setBlockAt(blockPosInChunk, blockID)
+        for (playerArea in loadedAreas) {
+            if (pos in playerArea.value) {
+                //TODO: send update to player playerArea.key
+            }
+        }
     }
 
     fun placeBlockAt(pos: IVec3, blockID: Short) {
@@ -398,9 +461,25 @@ class World(var seed : Long) {
                 lightFromIVec4ToShort(light)
             )
         }
+        for (playerArea in loadedAreas) {
+            if (pos in playerArea.value) {
+                //TODO: send update to player playerArea.key
+            }
+        }
     }
 
-    private fun loadPlayers() {
-        TODO("Not yet implemented")
+    fun saveChunks() {
+        val chunksToSave = mutableListOf<Chunk>()
+        for (c in chunks) {
+            if (c.value.dirtyBlocks || !c.value.existsOnDisk) chunksToSave.add(c.value)
+        }
+        chunksToSave.addAll(chunkCache.getChunksToSave())
+        WorldSaver.saveChunks(this, chunksToSave)
+    }
+
+    fun shutDown() {
+        chunkGenerationThreadShouldBeRunning.set(false)
+        Thread.sleep(10)
+        saveChunks()
     }
 }
