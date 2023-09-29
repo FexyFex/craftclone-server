@@ -1,11 +1,13 @@
 package game.world.saving
-/*
+
 import FileSystem
 import game.world.Chunk
 import game.world.World
 import math.datatype.vec.IVec3
 import net.jpountz.lz4.LZ4Factory
 import util.for3D
+import util.getInt
+import util.toByteArray
 import util.ushr
 import java.io.File
 import java.io.FileInputStream
@@ -93,7 +95,7 @@ object WorldSaver {
                             // compress chunk and write data
                             val chunkData = compressChunk(chunk)
                             writer.write(1) // chunk exists
-                            writer.write(chunkData.size.toByteBuffer().toByteArray())
+                            writer.write(chunkData.size.toByteArray())
                             writer.write(chunkData)
                             // skip the chunk in oldFile
                             val saved = reader.read() // saved/chunk exists
@@ -101,7 +103,7 @@ object WorldSaver {
                                 val lengthArray = ByteArray(4)
                                 reader.read(lengthArray, 0, 4)
                                 val chunkLength = lengthArray.getInt(0)
-                                reader.skip(chunkLength.toLong)
+                                reader.skip(chunkLength.toLong())
                             }
                             chunk.existsOnDisk = true
                             chunk.dirtyBlocks = false
@@ -176,7 +178,7 @@ object WorldSaver {
                             val lengthArray = ByteArray(4)
                             reader.read(lengthArray, 0, 4)
                             val chunkLength = lengthArray.getInt(0)
-                            reader.skip(chunkLength.toLong)
+                            reader.skip(chunkLength.toLong())
                         }
                         chunksRead++
                     }
@@ -309,4 +311,3 @@ object WorldSaver {
     }
 
 }
- */
