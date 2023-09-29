@@ -3,6 +3,7 @@ package math.datatype.vec
 data class IVec4(override var x: Int, override var y: Int, override var z: Int, override var w: Int): TVec4<Int>() {
     constructor(s: Int): this(s,s,s,s)
     constructor(x: Number, y: Number, z: Number, w: Number): this(x.toInt(), y.toInt(), z.toInt(), w.toInt())
+    constructor(v: IVec4): this(v.x.toInt(), v.y.toInt(), v.z.toInt(), v.w.toInt())
 
     override operator fun plus(other: TVec4<Int>): IVec4 = IVec4(this.x + other.x, this.y + other.y, this.z + other.z, this.w + other.w)
     override operator fun minus(other: TVec4<Int>): IVec4 = IVec4(this.x - other.x, this.y - other.y, this.z - other.z, this.w - other.w)

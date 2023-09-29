@@ -17,7 +17,7 @@ object CraftCloneServer {
     private val connections = mutableListOf<ClientConnectionThread>()
     private val players = mutableListOf<RemotePlayer>()
 
-    private val world = World((((Math.random() * 2.0) - 1.0) * Int.MAX_VALUE).toInt())
+    private val world = World((((Math.random() * 2.0) - 1.0) * Int.MAX_VALUE).toLong())
 
 
     fun bindAndLaunch() = runBlocking {
