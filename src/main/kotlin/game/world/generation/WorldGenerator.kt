@@ -25,11 +25,8 @@ class WorldGenerator (private val world: World) {
     private val grass = BlockRegistry.getIdByName("Grass")
     private val leaves = BlockRegistry.getIdByName("Leaves")
 
-    private val heightmapMultiplier = 128
-    private val heightmapAddition = 10
     private val heightmapNoise = FastNoiseLite()
     private val terrainNoise3D = FastNoiseLite()
-    private val mixNoise = FastNoiseLite()
 
     private val caveTunnelNoise1 = FastNoiseLite()
     private val caveTunnelNoise2 = FastNoiseLite()
@@ -49,12 +46,6 @@ class WorldGenerator (private val world: World) {
         terrainNoise3D.SetFrequency(1f/32f)
         terrainNoise3D.SetFractalType(FastNoiseLite.FractalType.FBm)
         terrainNoise3D.SetFractalOctaves(3)
-
-        mixNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2)
-        mixNoise.SetSeed(world.seed + 300)
-        mixNoise.SetFrequency(1f/100f)
-        mixNoise.SetFractalType(FastNoiseLite.FractalType.FBm)
-        mixNoise.SetFractalOctaves(3)
 
         caveTunnelNoise1.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2)
         caveTunnelNoise1.SetSeed(world.seed + 400)
@@ -101,7 +92,7 @@ class WorldGenerator (private val world: World) {
                 val posInChunk = IVec3(x,0,z)
                 val worldPos = posInChunk + chunkWorldPos
 
-                val terrainHeight: Float = heightmapNoise.GetNoise(worldPos.x.toFloat(),worldPos.z.toFloat()) * heightmapMultiplier + heightmapAddition
+                val terrainHeight: Float = -heightmapNoise.GetNoise(worldPos.x.toFloat(),worldPos.z.toFloat()) * 32
                 if (terrainHeight < minHeight) minHeight = terrainHeight
 
                 /*if (chunkWorldPos.y > 2*Chunk.extent + terrainHeight) {
@@ -214,13 +205,11 @@ class WorldGenerator (private val world: World) {
     }
 
     fun getBlockToPlaceAt(pos: IVec3): Short{
-        val heightmap = heightmapNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat()) * heightmapMultiplier + heightmapAddition
-        val terrainMultiplier = 96
-        val terrainValue = terrainNoise3D.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat()) * terrainMultiplier
-        val mixValue = mixNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat())
-        val mixedValue = mix(heightmap, terrainValue, clamp(mixValue+1f/2f, 0f, 1f))
-        val scaledY = if (pos.y < 0) pos.y * 3 else pos.y
-        if (mixedValue - scaledY > 0) {
+        val heightmap = heightmapNoise.GetNoise(pos.x.toFloat(), pos.z.toFloat())
+        val terrainValue = terrainNoise3D.GetNoise(pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
+        val terrainValue2 = 64f * terrainValue * (if (heightmap-0.2f > 0f) 0f else heightmap-0.2f)
+
+        if (heightmap*16f + pos.y + terrainValue2 < 0) {
             return stone ?: 1
         }
         return 0
